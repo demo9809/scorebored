@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mazin - Live Arts Festival Leaderboard",
+  title: "Dharmagiri College of Arts and Science - Live Arts Festival Leaderboard",
   description: "Real-time scores, results, and championship standings for the Mazin Arts Festival. Follow live updates and team performances.",
 };
 

@@ -70,7 +70,11 @@ export default async function LandingPage() {
 
       <footer className="py-8 w-full border-t bg-white dark:bg-gray-950">
          <div className="container mx-auto px-4 text-center">
-            <p className="text-sm text-muted-foreground">© 2026 Darmagiri College AI Department</p>
+            <div className="flex flex-col items-center gap-2">
+                <h3 className="font-semibold text-foreground">Dharmagiri College of Arts and Science</h3>
+                <p className="text-sm text-muted-foreground">(Affiliated to University of Calicut & Approved by AICTE)</p>
+                <p className="text-sm text-muted-foreground">Kunnumpuram, Cheruppadimala, Malappuram Dt</p>
+            </div>
          </div>
       </footer>
     </div>
