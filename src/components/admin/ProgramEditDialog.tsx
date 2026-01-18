@@ -170,7 +170,12 @@ export function ProgramEditDialog({ program }: ProgramEditDialogProps) {
                   <FormItem>
                     <FormLabel>Max Score</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} value={field.value === undefined || field.value === null ? "" : field.value} onChange={(e) => field.onChange(e.target.valueAsNumber || e.target.value)} />
+                      <Input 
+                          type="number" 
+                          {...field}
+                          value={(field.value as number) || ""}
+                          onChange={(e) => field.onChange(e.target.valueAsNumber)} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -183,7 +188,12 @@ export function ProgramEditDialog({ program }: ProgramEditDialogProps) {
                   <FormItem>
                     <FormLabel>Best of N Judges</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} value={field.value === undefined || field.value === null ? "" : field.value} onChange={(e) => field.onChange(e.target.valueAsNumber || e.target.value)} />
+                      <Input 
+                          type="number" 
+                          {...field}
+                          value={(field.value as number) || ""}
+                          onChange={(e) => field.onChange(e.target.valueAsNumber)} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

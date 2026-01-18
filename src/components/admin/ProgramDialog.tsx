@@ -164,7 +164,12 @@ export function ProgramDialog() {
                   <FormItem>
                     <FormLabel>Max Score</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.valueAsNumber)} />
+                        <Input 
+                            type="number" 
+                            {...field}
+                            value={(field.value as number) || ""}
+                            onChange={(e) => field.onChange(e.target.valueAsNumber)} 
+                        />
                       </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -177,7 +182,12 @@ export function ProgramDialog() {
                   <FormItem>
                     <FormLabel>Best of N Judges</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} value={field.value ?? ""} onChange={(e) => field.onChange(e.target.valueAsNumber)} />
+                        <Input 
+                            type="number" 
+                            {...field}
+                            value={(field.value as number) || ""}
+                            onChange={(e) => field.onChange(e.target.valueAsNumber)} 
+                        />
                       </FormControl>
                     <FormMessage />
                   </FormItem>

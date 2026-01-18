@@ -103,7 +103,12 @@ export function RuleDialog({ programId }: { programId: string }) {
                   <FormItem>
                     <FormLabel>Max Score</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} value={field.value ?? ""} />
+                      <Input 
+                          type="number" 
+                          {...field}
+                          value={(field.value as number) || ""}
+                          onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -116,7 +121,12 @@ export function RuleDialog({ programId }: { programId: string }) {
                   <FormItem>
                     <FormLabel>Order</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} value={field.value ?? ""} />
+                      <Input 
+                          type="number" 
+                          {...field}
+                          value={(field.value as number) || ""}
+                          onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
