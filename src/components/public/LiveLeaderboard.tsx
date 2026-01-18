@@ -1,0 +1,165 @@
+"use client"
+
+import { useState, useEffect, useMemo } from "react"
+import { createClient } from "@/lib/supabase/client"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Trophy } from "lucide-react"
+
+interface LiveLeaderboardProps {
+  program: any
+  initialParticipants: any[]
+  initialScores: any[]
+}
+
+export function LiveLeaderboard({ program, initialParticipants, initialScores }: LiveLeaderboardProps) {
+  const [scores, setScores] = useState<any[]>(initialScores)
+  const supabase = createClient()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime_scores')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scores',
+          filter: `program_id=eq.${program.id}`,
+        },
+        (payload) => {
+           console.log('Realtime update:', payload)
+           if (payload.eventType === 'INSERT') {
+               setScores(prev => [...prev, payload.new])
+           } else if (payload.eventType === 'UPDATE') {
+               setScores(prev => prev.map(s => s.id === payload.new.id ? payload.new : s))
+           } else if (payload.eventType === 'DELETE') {
+               setScores(prev => prev.filter(s => s.id !== payload.old.id))
+           }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [program.id, supabase])
+
+  // Calculate ranks
+  const rankedParticipants = useMemo(() => {
+      // 1. Group scores by participant
+      const participantScores: Record<string, number> = {} // pid -> total
+      
+      // We need to aggregate properly.
+      // Logic: Max Score per rule? Or just sum of all scores?
+      // AND "Best of N Judges".
+      // This is complex for client-side if data is massive, but for 20-50 participants it's fine.
+      
+      // Group by participant -> judge -> rule
+      const pMap: Record<string, Record<string, number>> = {} // pid -> judge_id -> total_for_judge
+      
+      scores.forEach(s => {
+          if (!pMap[s.participant_id]) pMap[s.participant_id] = {}
+          if (!pMap[s.participant_id][s.judge_id]) pMap[s.participant_id][s.judge_id] = 0
+          pMap[s.participant_id][s.judge_id] += s.score_value
+      })
+      
+      // Now aggregate judges based on program.best_of_judge_count
+      const finalScores: { id: string, total: number, participant: any }[] = []
+
+      initialParticipants.forEach(p => {
+          const judgeScores = pMap[p.id] ? Object.values(pMap[p.id]) : []
+          // Sort judge scores desc
+          judgeScores.sort((a,b) => b - a)
+          
+          // Take top N
+          const N = program.best_of_judge_count || 100 // fallback to all
+          const bestScores = judgeScores.slice(0, N)
+          
+          // Average or Sum? Usually Average of best N? Or Sum?
+          // Prompt doesn't specify formula. "Max score per judge" implies Judge gives X.
+          // Usually final score is Average of these N judges.
+          
+          const sum = bestScores.reduce((a,b) => a+b, 0)
+          const avg = bestScores.length > 0 ? sum / bestScores.length : 0
+          
+          // Let's use Average for now as it's standard.
+          
+          finalScores.push({
+              id: p.id,
+              total: avg,
+              participant: p
+          })
+      })
+
+      // Sort by total desc
+      return finalScores.sort((a,b) => b.total - a.total)
+
+  }, [scores, initialParticipants, program.best_of_judge_count])
+
+  // Assign ranks
+  let currentRank = 1
+  const leaderboard = rankedParticipants.map((item, index) => {
+      if (index > 0 && item.total < rankedParticipants[index-1].total) {
+          currentRank = index + 1
+      }
+      return { ...item, rank: currentRank }
+  })
+
+  return (
+    <Card>
+        <CardHeader>
+            <CardTitle>Leaderboard</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-[100px]">Rank</TableHead>
+                        <TableHead>Participant</TableHead>
+                        <TableHead className="text-right">Score</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {leaderboard.map((item) => (
+                        <TableRow key={item.id} className={item.rank === 1 ? "bg-yellow-50 dark:bg-yellow-900/10 font-bold" : ""}>
+                            <TableCell className="font-medium flex items-center gap-2">
+                                {item.rank === 1 && <Trophy className="h-4 w-4 text-yellow-500" />}
+                                <span className={item.rank <= 3 ? "text-lg" : ""}>#{item.rank}</span>
+                            </TableCell>
+                            <TableCell>
+                                <div>
+                                    <div className="font-semibold">
+                                     {program.participant_type === 'individual' ? item.participant.candidates?.name : item.participant.teams?.name}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                        {item.participant.participant_no}
+                                    </div>
+                                </div>
+                            </TableCell>
+                            <TableCell className="text-right text-lg">
+                                {item.total.toFixed(2)}
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                     {leaderboard.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                                No scores yet.
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+        </CardContent>
+    </Card>
+  )
+}
