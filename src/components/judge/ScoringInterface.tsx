@@ -173,7 +173,7 @@ export function ScoringInterface({ program, judgeId, rules, participants, initia
                                     min="0"
                                     max={rule.max_score}
                                     step="0.5"
-                                    value={currentScores[rule.id] ?? ""}
+                                    value={currentScores[rule.id] !== undefined ? currentScores[rule.id] : ""}
                                     onChange={(e) => handleScoreChange(rule.id, e.target.value)}
                                     disabled={readOnly}
                                     className={readOnly ? "bg-muted text-muted-foreground" : ""}

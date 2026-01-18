@@ -141,7 +141,7 @@ export function ScoreEditDialog({
                         min="0"
                         max={rule.max_score}
                         step="0.5"
-                        value={scores[rule.id] ?? ""}
+                        value={scores[rule.id] !== undefined ? scores[rule.id] : ""}
                         onChange={(e) => handleScoreChange(rule.id, e.target.value)}
                      />
                  </div>
