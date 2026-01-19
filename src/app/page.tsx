@@ -6,6 +6,8 @@ import { calculateTeamPoints } from "@/lib/points"
 import { ProgramGrid } from "@/components/public/ProgramGrid"
 import { StandingsList } from "@/components/public/StandingsList"
 
+
+
 export default async function LandingPage() {
   const supabase = await createClient()
 
@@ -35,7 +37,8 @@ export default async function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50/30 dark:bg-gray-950">
-      {/* Navbar */}
+      
+      {/* Content Area */}
       <main className="flex-1 pt-12">
          <div className="container mx-auto py-4 px-4 md:px-6">
             <Tabs defaultValue="standings" className="w-full space-y-8">
@@ -71,9 +74,9 @@ export default async function LandingPage() {
       <footer className="py-8 w-full border-t bg-white dark:bg-gray-950">
          <div className="container mx-auto px-4 text-center">
             <div className="flex flex-col items-center gap-2">
-                <h3 className="font-semibold text-foreground">Dharmagiri College of Arts and Science</h3>
-                <p className="text-sm text-muted-foreground">(Affiliated to University of Calicut & Approved by AICTE)</p>
-                <p className="text-sm text-muted-foreground">Kunnumpuram, Cheruppadimala, Malappuram Dt</p>
+                <h3 className="font-semibold text-foreground">Powered by AI Department, Dharmagiri College of Arts and Science</h3>
+                {/* <p className="text-sm text-muted-foreground">(Affiliated to University of Calicut & Approved by AICTE)</p> */}
+                {/* <p className="text-sm text-muted-foreground">Powered by AI Department</p> */}
             </div>
          </div>
       </footer>

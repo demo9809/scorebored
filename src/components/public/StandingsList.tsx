@@ -57,7 +57,6 @@ export function StandingsList({ rankings }: StandingsListProps) {
                                    <div className="h-1 w-12 rounded-full bg-gray-200 overflow-hidden">
                                       <div className="h-full bg-primary/50" style={{ width: `${Math.min((team.totalPoints / (top3[0]?.totalPoints || 1)) * 100, 100)}%` }}></div>
                                    </div>
-                                   <span className="text-[10px] text-muted-foreground">{team.programBreakdown?.length || 0} events</span>
                                 </div>
                             </div>
                             <div className="col-span-3 text-right font-mono font-bold text-lg text-gray-700 dark:text-gray-300">
@@ -85,6 +84,7 @@ function WinnerCard({ team, rank, isFirst = false, color, shadow, delay }: { tea
              
              <Card className={cn(
                  "relative border-0 overflow-hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-2xl rounded-3xl", 
+                 shadow,
                  isFirst ? "h-[320px]" : "h-[250px]"
              )}>
                 {/* Background Decor */}
