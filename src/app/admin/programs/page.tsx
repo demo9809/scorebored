@@ -32,6 +32,9 @@ async function getPrograms(searchParams: SearchParams) {
 
   if (status && status !== "all") {
     query = query.eq("status", status as any)
+  } else if (!q) {
+    // Default: Hide completed programs unless searching or explicitly filtering
+    query = query.neq("status", "completed")
   }
 
   if (type && type !== "all") {

@@ -1,10 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Trophy, Users, UserCheck, Activity, TrendingUp, Zap, AlertTriangle } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Trophy, TrendingUp, Zap, AlertTriangle } from "lucide-react"
 import { calculateTeamPoints } from "@/lib/points"
 import { getDashboardStats } from "../actions/dashboard-stats"
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts"
-import { LivePulse } from "@/components/admin/LivePulse"
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
@@ -23,7 +22,6 @@ export default async function AdminDashboard() {
 
   // AI Insights Logic (Simple Heuristics)
   const topDepartment = stats.analytics.department[0]
-  const competitiveIndex = stats.counts.scores > 0 ? (stats.counts.scores / stats.counts.programs).toFixed(1) : "0"
   
   return (
     <div className="flex flex-col gap-6 p-2">
@@ -38,9 +36,9 @@ export default async function AdminDashboard() {
           </div>
       </div>
       
-      {/* TOP METRICS & PULSE */}
-      <div className="grid gap-4 md:grid-cols-4 lg:grid-cols-5">
-        <Card className="md:col-span-4 lg:col-span-4 grid gap-4 md:grid-cols-4 p-4 bg-muted/20">
+      {/* TOP METRICS */}
+      <div className="grid gap-4">
+        <Card className="grid gap-4 md:grid-cols-3 p-4 bg-muted/20">
              <div className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground uppercase font-bold">Total Programs</span>
                 <span className="text-2xl font-bold">{stats.counts.programs}</span>
@@ -52,21 +50,11 @@ export default async function AdminDashboard() {
                  <span className="text-[10px] text-muted-foreground">From {stats.analytics.department.length} Depts</span>
              </div>
              <div className="flex flex-col gap-1">
-                 <span className="text-xs text-muted-foreground uppercase font-bold">Total Scores</span>
-                 <span className="text-2xl font-bold">{stats.counts.scores}</span>
-                 <span className="text-[10px] text-blue-600 flex items-center gap-1"><Activity className="h-3 w-3" /> Avg {competitiveIndex} / Prg</span>
-             </div>
-             <div className="flex flex-col gap-1">
                  <span className="text-xs text-muted-foreground uppercase font-bold">Leading Team</span>
                  <span className="text-xl font-bold truncate text-primary">{rankings[0]?.name || "N/A"}</span>
                  <span className="text-[10px] text-muted-foreground">{rankings[0]?.totalPoints || 0} Points</span>
              </div>
         </Card>
-        
-        {/* LIVE PULSE SIDEBAR */}
-        <div className="md:col-span-4 lg:col-span-1 row-span-2">
-            <LivePulse initialPulse={stats.pulse} />
-        </div>
       </div>
 
       {/* ANALYTICS & INSIGHTS */}
