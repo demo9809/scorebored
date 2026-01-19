@@ -37,11 +37,12 @@ export default async function AdminTeamDetailsPage({
         *,
         program_participants(
             program_id,
-            program:programs(name, participant_type)
+            program:programs(id, name, participant_type)
         ),
         program_participant_members(
             program_participant:program_participants(
-                program:programs(name, participant_type)
+                program_id,
+                program:programs(id, name, participant_type)
             )
         )
     `)
