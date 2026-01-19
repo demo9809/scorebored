@@ -95,8 +95,12 @@ export function ProgramParticipants({
       setParticipantNo("")
       router.refresh()
     } catch (error: any) {
-      toast.error("Failed to add participant")
-      console.error(error)
+      console.error("Add participant error:", error)
+      if (error.code === '23505') {
+          toast.error("This candidate is already enrolled in this program")
+      } else {
+          toast.error("Failed to add participant: " + (error.message || "Unknown error"))
+      }
     } finally {
       setLoading(false)
     }

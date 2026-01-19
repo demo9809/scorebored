@@ -14,6 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Trophy } from "lucide-react"
 
+// Points Logic
+const POINTS_INDIVIDUAL = { 1: 5, 2: 3, 3: 1 }
+const POINTS_GROUP = { 1: 10, 2: 5, 3: 3 }
+
 interface LiveLeaderboardProps {
   program: any
   initialParticipants: any[]
@@ -106,14 +110,38 @@ export function LiveLeaderboard({ program, initialParticipants, initialScores }:
 
   // Assign ranks
   const leaderboard = useMemo(() => {
+      // If completed, trust the rank from DB if available
+      if (program.status === 'completed') {
+          // Map participants to include total (for display) and rank
+          const dbRanked = initialParticipants.map(p => {
+              // total_score is stored * 10 usually, or just store points?
+              // Import results stores: total_score: points * 10
+              // So display total = total_score / 10 if we want points.
+              // BUT, the table display logic below handles "Points" display based on rank.
+              // So let's just ensure rank is correct.
+              
+              return {
+                  id: p.id,
+                  total: p.total_score ? p.total_score / 10 : 0, // Fallback
+                  rank: p.rank || 999,
+                  participant: p
+              }
+          })
+          
+          return dbRanked.sort((a,b) => a.rank - b.rank)
+      }
+
+      // Live Calculation
       let currentRank = 1
       return rankedParticipants.map((item, index) => {
+          let rank = currentRank
           if (index > 0 && item.total < rankedParticipants[index-1].total) {
-              currentRank = index + 1
+              rank = index + 1
+              currentRank = rank
           }
-          return { ...item, rank: currentRank }
+          return { ...item, rank }
       })
-  }, [rankedParticipants])
+  }, [rankedParticipants, program.status, initialParticipants])
 
   return (
     <Card>
@@ -126,11 +154,25 @@ export function LiveLeaderboard({ program, initialParticipants, initialScores }:
                     <TableRow>
                         <TableHead className="w-[100px]">Rank</TableHead>
                         <TableHead>Participant</TableHead>
-                        <TableHead className="text-right">Score</TableHead>
+                        <TableHead className="text-right">
+                            {program.status === 'completed' ? 'Points' : 'Score'}
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {leaderboard.map((item) => (
+                    {leaderboard.map((item) => {
+                         // Calculate display score (Points) if completed
+                         let displayScore = item.total.toFixed(2)
+                         
+                         if (program.status === 'completed') {
+                             const pType = program.participant_type === 'team' || program.participant_type === 'group' ? 'group' : 'individual'
+                             const pointsMap = pType === 'group' ? POINTS_GROUP : POINTS_INDIVIDUAL
+                             // @ts-ignore
+                             const points = pointsMap[item.rank] || 0
+                             displayScore = points.toString()
+                         }
+
+                         return (
                         <TableRow key={item.id} className={item.rank === 1 ? "bg-yellow-50 dark:bg-yellow-900/10 font-bold" : ""}>
                             <TableCell className="font-medium flex items-center gap-2">
                                 {item.rank === 1 && <Trophy className="h-4 w-4 text-yellow-500" />}
@@ -152,10 +194,10 @@ export function LiveLeaderboard({ program, initialParticipants, initialScores }:
                                 </div>
                             </TableCell>
                             <TableCell className="text-right text-lg">
-                                {item.total.toFixed(2)}
+                                {displayScore}
                             </TableCell>
                         </TableRow>
-                    ))}
+                    )})}
                      {leaderboard.length === 0 && (
                         <TableRow>
                             <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">

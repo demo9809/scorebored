@@ -45,9 +45,21 @@ export function AdminScoreMatrix({ program, judges, participants, scores }: Admi
 
   // Calculate final total for a participant (average of best N judges)
   const getFinalScore = useMemo(() => {
-    return (participantId: string) => {
+    return (participant: any) => {
+      // If completed and has total_score, use it (divided by 10 for points display if needed, but usually admin wants raw total?)
+      // Wait, user complained "score/points not showing". Public view shows points (5,3,1).
+      // Admin dashboard usually shows raw score (e.g. 245/300) OR points?
+      // "Score/Points is not showing" -> "0.00".
+      // If imported, total_score is 50, 30, 10 (points * 10).
+      // Let's display total_score / 10 if it exists and status is completed.
+      
+      if (program.status === 'completed' && participant.total_score !== undefined && participant.total_score !== null) {
+          return participant.total_score / 10
+      }
+
+      // Live Calculation
       // Get all judge totals for this participant
-      const judgeTotals = judges.map(j => getCellData(j.id, participantId).total)
+      const judgeTotals = judges.map(j => getCellData(j.id, participant.id).total)
       
       // Sort desc
       judgeTotals.sort((a,b) => b - a)
@@ -61,12 +73,16 @@ export function AdminScoreMatrix({ program, judges, participants, scores }: Admi
       
       return avg
     }
-  }, [judges, program.best_of_judge_count, getCellData])
+  }, [judges, program.best_of_judge_count, getCellData, program.status])
 
   // Sort participants by final rank
   const sortedParticipants = useMemo(() => {
-    return [...participants].sort((a, b) => getFinalScore(b.id) - getFinalScore(a.id))
-  }, [participants, getFinalScore])
+    if (program.status === 'completed') {
+        const withRank = [...participants].sort((a,b) => (a.rank || 999) - (b.rank || 999))
+        return withRank
+    }
+    return [...participants].sort((a, b) => getFinalScore(b) - getFinalScore(a))
+  }, [participants, getFinalScore, program.status])
 
   return (
     <div className="space-y-4">
@@ -89,10 +105,12 @@ export function AdminScoreMatrix({ program, judges, participants, scores }: Admi
           </TableHeader>
           <TableBody>
             {sortedParticipants.map((participant, index) => {
-                const finalScore = getFinalScore(participant.id)
+                const finalScore = getFinalScore(participant)
+                const rankDisplay = program.status === 'completed' ? (participant.rank || "-") : index + 1
+
                 return (
                   <TableRow key={participant.id}>
-                    <TableCell className="font-medium text-muted-foreground">#{index + 1}</TableCell>
+                    <TableCell className="font-medium text-muted-foreground">#{rankDisplay}</TableCell>
                     <TableCell>
                       <div className="font-medium">
                         {program.participant_type === 'individual' ? (
@@ -119,7 +137,7 @@ export function AdminScoreMatrix({ program, judges, participants, scores }: Admi
                       )
                     })}
                     <TableCell className="text-right font-bold text-lg bg-muted/50">
-                        {finalScore.toFixed(2)}
+                        {finalScore === 0 && program.status === 'completed' ? "-" : finalScore.toFixed(2)}
                     </TableCell>
                   </TableRow>
                 )

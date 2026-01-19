@@ -4,6 +4,7 @@ import { calculateTeamPoints } from "@/lib/points"
 
 // Components
 import { ProgramGrid } from "@/components/public/ProgramGrid"
+import { ProgramSearch } from "@/components/public/ProgramSearch"
 import { StandingsList } from "@/components/public/StandingsList"
 
 
@@ -65,7 +66,7 @@ export default async function LandingPage() {
                 </TabsContent>
 
                 <TabsContent value="results" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <ProgramGrid programs={completedPrograms} type="completed" />
+                    <ProgramSearch programs={completedPrograms} type="completed" />
                 </TabsContent>
             </Tabs>
          </div>

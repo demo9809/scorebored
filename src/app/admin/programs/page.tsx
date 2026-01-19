@@ -63,12 +63,19 @@ export default async function ProgramsPage({
   const { data: programs, count } = await getPrograms(resolvedSearchParams)
   const totalPages = Math.ceil(count / ITEMS_PER_PAGE)
   const currentPage = Number(resolvedSearchParams.page) || 1
+  
+  const supabase = await createClient()
+  const { data: judges } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("role", "judge")
+    .order("full_name", { ascending: true })
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Programs</h1>
-        <div className="flex gap-2">
+         <div className="flex gap-2">
             <ImportResultsDialog />
             <ProgramDialog />
         </div>
@@ -77,7 +84,7 @@ export default async function ProgramsPage({
       <div className="space-y-4">
         <ProgramToolbar />
 
-        <ProgramsList programs={programs} />
+        <ProgramsList programs={programs} judges={judges || []} />
 
         <Pagination totalPages={totalPages} currentPage={currentPage} />
       </div>
