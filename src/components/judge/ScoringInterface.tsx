@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { getProjectedStandings } from "@/app/actions/get-projected-standings"
+import { Trophy } from "lucide-react"
 
 interface ScoringInterfaceProps {
   program: any
@@ -23,6 +25,7 @@ export function ScoringInterface({ program, judgeId, rules, participants, initia
   const [activeParticipantId, setActiveParticipantId] = useState<string>("")
   const [scores, setScores] = useState<Record<string, Record<string, number>>>({}) // participantId -> ruleId -> score
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [projectedWinner, setProjectedWinner] = useState<{name: string, score: number} | null>(null)
   
   const supabase = createClient()
 
@@ -43,6 +46,20 @@ export function ScoringInterface({ program, judgeId, rules, participants, initia
         setActiveParticipantId(participants[0].id)
     }
   }, [initialScores, participants, activeParticipantId])
+
+  // --- Realtime Winner Calculation ---
+  const updateWinner = async () => {
+    const res = await getProjectedStandings(program.id)
+    if (res.success && res.rankings && res.rankings.length > 0) {
+        setProjectedWinner({ name: res.rankings[0].name, score: res.rankings[0].total_score })
+    }
+  }
+
+  useEffect(() => {
+    updateWinner()
+    const interval = setInterval(updateWinner, 15000)
+    return () => clearInterval(interval)
+  }, [program.id])
 
   const handleScoreChange = (ruleId: string, value: string) => {
     if (readOnly) return
@@ -106,6 +123,7 @@ export function ScoringInterface({ program, judgeId, rules, participants, initia
           if (error) throw error
 
           toast.success("Scores saved successfully")
+          updateWinner()
       } catch (err: any) {
           console.error("Save Error:", JSON.stringify(err, null, 2))
           toast.error(err.message || "Failed to save scores")
@@ -122,6 +140,27 @@ export function ScoringInterface({ program, judgeId, rules, participants, initia
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+       {/* Inject Winner Display at top of sidebar or main area? */}
+       <div className="md:col-span-4 mb-2">
+            {projectedWinner && (
+               <div className="bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/10 dark:to-orange-900/10 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 flex items-center justify-between shadow-sm">
+                   <div className="flex items-center gap-2">
+                       <div className="bg-yellow-100 dark:bg-yellow-900/50 p-2 rounded-full">
+                           <Trophy className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                       </div>
+                       <div>
+                           <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200 uppercase tracking-wider">Current Leader</p>
+                           <p className="font-bold text-lg leading-none text-foreground">{projectedWinner.name}</p>
+                       </div>
+                   </div>
+                   <div className="text-right">
+                       <p className="text-2xl font-bold tabular-nums leading-none text-yellow-700 dark:text-yellow-500">{projectedWinner.score}</p>
+                       <p className="text-xs text-muted-foreground">Points</p>
+                   </div>
+               </div>
+            )}
+       </div>
+
       {/* Participant List (Sidebar) */}
       <Card className="md:col-span-1 h-fit">
          <CardHeader>

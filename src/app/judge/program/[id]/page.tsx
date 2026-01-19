@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { ScoringInterface } from "@/components/judge/ScoringInterface"
+import { FinalizeCompetitionDialog } from "@/components/judge/FinalizeCompetitionDialog"
 
 export default async function JudgeScoringPage({
   params,
@@ -74,6 +75,13 @@ export default async function JudgeScoringPage({
                </div>
              </div>
            </div>
+           
+           {program.status === 'live' && (
+              <FinalizeCompetitionDialog 
+                programId={program.id} 
+                programName={program.name} 
+              />
+           )}
            {/* Maybe show connection status here later */}
         </div>
       </header>
