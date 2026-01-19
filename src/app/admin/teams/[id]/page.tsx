@@ -28,10 +28,15 @@ export default async function AdminTeamDetailsPage({
   const pointsData = await calculateTeamPoints(supabase, id)
 
   // Fetch candidates strictly for this team
-  const { data: candidates } = await supabase
+  const { data: candidates, error: candError } = await supabase
     .from("candidates")
     .select("*")
     .eq("team_id", id)
+  
+  if (candError) {
+      console.error("Error fetching candidates:", candError)
+  }
+  console.log(`Fetched ${candidates?.length} candidates for team ${id}`)
 
   return (
     <div className="flex flex-col gap-8">

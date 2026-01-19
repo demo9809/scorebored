@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { CandidateDialog } from "@/components/admin/CandidateDialog"
 import { DeleteButton } from "@/components/admin/DeleteButton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { BulkImportDialog } from "@/components/admin/BulkImportDialog"
 
 export default async function CandidatesPage() {
   const supabase = await createClient()
@@ -35,7 +36,10 @@ export default async function CandidatesPage() {
             Manage individual candidates and their team affiliations.
           </p>
         </div>
-        <CandidateDialog teams={teams || []} />
+        <div className="flex gap-2">
+           <BulkImportDialog teams={teams || []} />
+           <CandidateDialog teams={teams || []} />
+        </div>
       </div>
 
       <Card>

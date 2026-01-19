@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createClient as createAdminClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 import { calculateProgramRankings } from "@/lib/ranking"
+import { updateAllTeamPoints } from "@/lib/points"
 
 export async function finalizeProgram(programId: string) {
   const supabase = await createClient()
@@ -82,6 +83,10 @@ export async function finalizeProgram(programId: string) {
       revalidatePath(`/judge/program/${programId}`)
       revalidatePath(`/admin/programs`)
       revalidatePath(`/`) // Public leaderboard
+
+      // 6. Asynchronously update team points 
+      // We await it here to ensure consistency for the immediate redirect/refresh
+      await updateAllTeamPoints(supabaseAdmin)
 
       return { success: true }
   } catch (error: any) {
