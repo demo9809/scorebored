@@ -95,7 +95,12 @@ export function AdminScoreMatrix({ program, judges, participants, scores }: Admi
                     <TableCell className="font-medium text-muted-foreground">#{index + 1}</TableCell>
                     <TableCell>
                       <div className="font-medium">
-                        {program.participant_type === 'individual' ? participant.candidates?.name : participant.teams?.name}
+                        {program.participant_type === 'individual' ? (
+                            <div className="flex flex-col">
+                                <span>{participant.candidates?.name}</span>
+                                <span className="text-xs text-muted-foreground font-normal">{participant.candidates?.teams?.name}</span>
+                            </div>
+                        ) : participant.teams?.name}
                       </div>
                       <div className="text-xs text-muted-foreground">{participant.participant_no}</div>
                     </TableCell>

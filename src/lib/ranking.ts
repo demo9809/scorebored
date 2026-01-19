@@ -61,7 +61,7 @@ export async function calculateProgramRankings(
       
       const name = program.participant_type === 'individual' 
         ? p.candidates?.name 
-        : p.teams?.name
+        : p.teams?.name + (p.candidates?.name ? ` (${p.candidates.name})` : "")
         
       return {
           id: p.id,

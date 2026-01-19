@@ -30,10 +30,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 interface BulkImportDialogProps {
     teams: { id: string; name: string }[]
+    programs: { id: string; name: string; participant_type: string }[]
     defaultTeamId?: string
 }
 
-export function BulkImportDialog({ teams, defaultTeamId }: BulkImportDialogProps) {
+export function BulkImportDialog({ teams, programs = [], defaultTeamId }: BulkImportDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [activeTab, setActiveTab] = useState<"text" | "file">("file")
@@ -45,10 +46,10 @@ export function BulkImportDialog({ teams, defaultTeamId }: BulkImportDialogProps
     const supabase = createClient()
 
     const handleDownloadTemplate = () => {
-        const headers = ["Name", "Chest Number", "Team Name (Optional if selected above)", "Year", "Department"]
+        const headers = ["Name", "Team Name (Optional if selected above)", "Year", "Department", "PROGRAM", "Chest Number (Optional)"]
         const data = [
-            ["John Doe", "101", "Orange House", "1st Year", "CS"],
-            ["Jane Smith", "102", "Blue House", "2nd Year", "Mech"]
+            ["John Doe", "Orange House", "1st Year", "CS", "Dheshabakthiganam", "101"],
+            ["Jane Smith", "Blue House", "2nd Year", "Mech", "Western Music Group", ""]
         ]
         const ws = XLSX.utils.aoa_to_sheet([headers, ...data])
         const wb = XLSX.utils.book_new()
@@ -67,21 +68,20 @@ export function BulkImportDialog({ teams, defaultTeamId }: BulkImportDialogProps
                 const wb = XLSX.read(bstr, { type: "binary" })
                 const wsname = wb.SheetNames[0]
                 const ws = wb.Sheets[wsname]
-                // Parse as array of arrays to be safe with varied column names
                 const data: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 })
                 
-                // Remove header row if it looks like a header (contains "Name" or "Chest")
-                if (data.length > 0 && (String(data[0][0]).toLowerCase().includes("name") || String(data[0][1]).toLowerCase().includes("chest"))) {
+                if (data.length > 0 && (String(data[0][0]).toLowerCase().includes("name"))) {
                     data.shift()
                 }
 
                 const candidates = data.map(row => ({
                     name: row[0],
-                    chest_number: row[1],
-                    team_name: row[2],
-                    year: row[3],
-                    department: row[4]
-                })).filter(c => c.name && c.chest_number)
+                    team_name: row[1],
+                    year: row[2],
+                    department: row[3],
+                    program_name: row[4] ? String(row[4]).trim() : null,
+                    chest_number: row[5] // Now optional and at the end
+                })).filter(c => c.name) // Only filter by name
 
                 setParsedData(candidates)
                 toast.success(`Parsed ${candidates.length} rows successfully`)
@@ -105,13 +105,14 @@ export function BulkImportDialog({ teams, defaultTeamId }: BulkImportDialogProps
         const lines = textData.split('\n').filter(l => l.trim().length > 0)
         const candidates = lines.map(line => {
              const parts = line.split(',').map(p => p.trim())
-             if (parts.length < 2) return null
+             if (parts.length < 1) return null
              return {
                  name: parts[0],
-                 chest_number: parts[1],
-                 team_name: parts[2],
-                 year: parts[3],
-                 department: parts[4]
+                 team_name: parts[1],
+                 year: parts[2],
+                 department: parts[3],
+                 program_name: parts[4] || null,
+                 chest_number: parts[5] // Optional
              }
         }).filter(Boolean) as any[]
         
@@ -127,7 +128,7 @@ export function BulkImportDialog({ teams, defaultTeamId }: BulkImportDialogProps
         try {
             const toInsert = candidates.map(c => ({
                 name: c.name,
-                chest_number: String(c.chest_number),
+                chest_number: c.chest_number ? String(c.chest_number) : null,
                 team_id: getTeamId(c.team_name),
                 year: c.year ? String(c.year) : null,
                 department: c.department ? String(c.department) : null
@@ -138,7 +139,11 @@ export function BulkImportDialog({ teams, defaultTeamId }: BulkImportDialogProps
                  return
             }
 
-            const { error } = await supabase.from("candidates").insert(toInsert)
+            // 1. Insert Candidates
+            const { data: insertedCandidates, error } = await supabase
+                .from("candidates")
+                .insert(toInsert)
+                .select()
             
             if (error) {
                 if (error.code === '23505') {
@@ -146,14 +151,123 @@ export function BulkImportDialog({ teams, defaultTeamId }: BulkImportDialogProps
                 } else {
                      throw error
                 }
-            } else {
-                toast.success(`Successfully imported ${toInsert.length} candidates`)
-                setOpen(false)
-                setTextData("")
-                setParsedData([])
-                if (fileInputRef.current) fileInputRef.current.value = ""
-                router.refresh()
+                return 
             }
+
+            // 2. Process Program Assignments
+            // Group by Program -> Team -> Candidates
+            const assignments: Record<string, { program: any, teams: Record<string, string[]> }> = {}
+            const individualAssignments: { program_id: string, candidate_id: string, participant_no: string | null }[] = []
+
+            for (let i = 0; i < insertedCandidates.length; i++) {
+                const inserted = insertedCandidates[i]
+                const original = candidates[i]
+                
+                if (original.program_name) {
+                    const program = programs.find(p => p.name.toLowerCase() === original.program_name.toLowerCase())
+                    
+                    if (program) {
+                        if (program.participant_type === 'individual') {
+                            individualAssignments.push({
+                                program_id: program.id,
+                                candidate_id: inserted.id,
+                                participant_no: inserted.chest_number
+                            })
+                        } else {
+                            // Team Grouping
+                            if (inserted.team_id) {
+                                if (!assignments[program.id]) {
+                                    assignments[program.id] = { program, teams: {} }
+                                }
+                                if (!assignments[program.id].teams[inserted.team_id]) {
+                                    assignments[program.id].teams[inserted.team_id] = []
+                                }
+                                assignments[program.id].teams[inserted.team_id].push(inserted.id)
+                            }
+                        }
+                    }
+                }
+            }
+
+            let assignedCount = 0
+
+            // Batch Assign Individuals
+            if (individualAssignments.length > 0) {
+                const { error: indError } = await supabase
+                    .from('program_participants')
+                    .insert(individualAssignments.map(a => ({
+                        program_id: a.program_id,
+                        candidate_id: a.candidate_id,
+                        participant_no: a.participant_no,
+                        status: 'active'
+                    })))
+                if (!indError) assignedCount += individualAssignments.length
+            }
+
+            // Batch Assign Teams
+            for (const programId in assignments) {
+                const { teams: teamGroups } = assignments[programId]
+                
+                for (const teamId in teamGroups) {
+                    const candidateIds = teamGroups[teamId]
+                    if (candidateIds.length === 0) continue
+
+                    // Check if team entry exists
+                    let programParticipantId: string | null = null
+
+                    const { data: existingTeamEntry } = await supabase
+                        .from('program_participants')
+                        .select('id')
+                        .eq('program_id', programId)
+                        .eq('team_id', teamId)
+                        .maybeSingle()
+
+                    if (existingTeamEntry) {
+                        programParticipantId = existingTeamEntry.id
+                    } else {
+                        // Create new entry using the first candidate as lead
+                        const leadCandidate = insertedCandidates.find(c => c.id === candidateIds[0])
+                        
+                        const { data: newEntry, error: createError } = await supabase
+                            .from('program_participants')
+                            .insert({
+                                program_id: programId,
+                                team_id: teamId,
+                                candidate_id: candidateIds[0], // Set first as lead
+                                participant_no: leadCandidate?.chest_number,
+                                status: 'active'
+                            })
+                            .select('id')
+                            .single()
+                        
+                        if (!createError && newEntry) {
+                            programParticipantId = newEntry.id
+                            assignedCount++
+                        }
+                    }
+
+                    if (programParticipantId) {
+                        // Add ALL candidates as members
+                        const membersPayload = candidateIds.map(cid => ({
+                            program_participant_id: programParticipantId! as string,
+                            candidate_id: cid
+                        }))
+                        
+                        const { error: memberError } = await supabase
+                            .from('program_participant_members')
+                            .upsert(membersPayload, { onConflict: 'program_participant_id, candidate_id', ignoreDuplicates: true })
+                        
+                        if (!memberError) assignedCount += candidateIds.length
+                    }
+                }
+            }
+
+            toast.success(`Imported ${insertedCandidates.length} candidates. Processed assignments.`)
+            setOpen(false)
+            setTextData("")
+            setParsedData([])
+            if (fileInputRef.current) fileInputRef.current.value = ""
+            router.refresh()
 
         } catch (e: any) {
             console.error(e)
@@ -171,11 +285,11 @@ export function BulkImportDialog({ teams, defaultTeamId }: BulkImportDialogProps
                     Import / Upload
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[700px]">
+            <DialogContent className="sm:max-w-[800px]">
                 <DialogHeader>
                     <DialogTitle>Import Candidates</DialogTitle>
                     <DialogDescription>
-                        Add candidates via Excel file or Copy-Paste text.
+                        Import candidates and optionally auto-register them to programs.
                     </DialogDescription>
                 </DialogHeader>
                 
@@ -233,25 +347,27 @@ export function BulkImportDialog({ teams, defaultTeamId }: BulkImportDialogProps
                                          <TableHeader>
                                              <TableRow>
                                                  <TableHead>Name</TableHead>
-                                                 <TableHead>Chest No</TableHead>
                                                  <TableHead>Team</TableHead>
                                                  <TableHead>Year</TableHead>
                                                  <TableHead>Dept</TableHead>
+                                                 <TableHead>Program</TableHead>
+                                                 <TableHead>Chest No</TableHead>
                                              </TableRow>
                                          </TableHeader>
                                          <TableBody>
                                              {parsedData.slice(0, 5).map((row, i) => (
                                                  <TableRow key={i}>
                                                      <TableCell>{row.name}</TableCell>
-                                                     <TableCell>{row.chest_number}</TableCell>
                                                      <TableCell>{row.team_name || (selectedTeamId !== "mixed" ? "Selected Team" : "-")}</TableCell>
                                                      <TableCell>{row.year}</TableCell>
                                                      <TableCell>{row.department}</TableCell>
+                                                     <TableCell>{row.program_name || "-"}</TableCell>
+                                                     <TableCell>{row.chest_number || "-"}</TableCell>
                                                  </TableRow>
                                              ))}
                                              {parsedData.length > 5 && (
                                                  <TableRow>
-                                                     <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                                     <TableCell colSpan={6} className="text-center text-muted-foreground">
                                                          ...and {parsedData.length - 5} more
                                                      </TableCell>
                                                  </TableRow>
@@ -265,11 +381,11 @@ export function BulkImportDialog({ teams, defaultTeamId }: BulkImportDialogProps
 
                     {activeTab === "text" && (
                         <div className="flex flex-col gap-2">
-                            <Label>Paste Data (Name, ChestNo, [Team])</Label>
+                            <Label>Paste Data (Name, Team, Year, Dept, Program)</Label>
                             <Textarea 
                                 value={textData} 
                                 onChange={(e) => setTextData(e.target.value)}
-                                placeholder={`John Doe, 101, Orange House, 1st Year, CS\nJane Smith, 102,, 2nd Year, Mech`}
+                                placeholder={`John Doe, Orange House, 1st Year, CS, Dheshabakthiganam\nJane Smith, Blue House, 2nd Year, Mech, Western Music Group`}
                                 className="min-h-[200px] font-mono"
                             />
                         </div>

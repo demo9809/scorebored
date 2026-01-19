@@ -6,15 +6,29 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { Check, ChevronsUpDown, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { ManageMembersDialog } from "@/components/admin/ManageMembersDialog"
 
@@ -33,6 +47,7 @@ export function ProgramParticipants({
   teams, 
   programParticipants 
 }: ProgramParticipantsProps) {
+  const [open, setOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string>("")
   const [participantNo, setParticipantNo] = useState("")
   const [loading, setLoading] = useState(false)
@@ -59,10 +74,16 @@ export function ProgramParticipants({
         status: "active"
       }
 
-      if (participantType === "individual") {
+      if (participantType === "individual" || participantType === "team") {
+        // Find the selected candidate to get their team_id
+        const selectedCandidate = candidates.find(c => c.id === selectedId)
+        if (!selectedCandidate) {
+            toast.error("Invalid candidate selected")
+            return
+        }
+        
         payload.candidate_id = selectedId
-      } else {
-        payload.team_id = selectedId
+        payload.team_id = selectedCandidate.team_id
       }
 
       const { error } = await supabase.from("program_participants").insert(payload)
@@ -133,27 +154,31 @@ export function ProgramParticipants({
       <CardContent className="space-y-4">
         <div className="flex flex-col gap-4">
             {/* Team Filter for Individual Programs */}
-            {participantType === "individual" && (
-                <div className="flex gap-2 items-center p-2 bg-muted/50 rounded-md">
-                    <span className="text-sm font-medium whitespace-nowrap">Filter by Team:</span>
-                    <Select value={selectedTeamFilter} onValueChange={setSelectedTeamFilter}>
-                        <SelectTrigger className="w-[200px]">
-                            <SelectValue placeholder="All Teams" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Teams</SelectItem>
-                            {teams.map(t => (
-                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    {selectedTeamFilter !== "all" && (
-                        <Button variant="secondary" size="sm" onClick={handleBulkAddTeam} disabled={isBulkAdding}>
-                            {isBulkAdding ? "Adding..." : "Add All from Team"}
-                        </Button>
-                    )}
-                </div>
-            )}
+            {/* Team Filter (for both Individual and Team programs now) */}
+            <div className="flex gap-2 items-center p-2 bg-muted/50 rounded-md">
+                <span className="text-sm font-medium whitespace-nowrap">Filter by Team:</span>
+                <Select value={selectedTeamFilter} onValueChange={setSelectedTeamFilter}>
+                    <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="All Teams" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Teams</SelectItem>
+                        {teams.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                {/* Bulk add only makes sense if we are adding ALL candidates, which is weird for Team events if we just want one lead. 
+                    So keep bulk add logic maybe? 
+                    Actually bulk adding "All Team Members" as "Team Leaders" makes no sense for a group item. 
+                    You only have ONE team entry per house usually.
+                */}
+                {selectedTeamFilter !== "all" && participantType === "individual" && (
+                    <Button variant="secondary" size="sm" onClick={handleBulkAddTeam} disabled={isBulkAdding}>
+                        {isBulkAdding ? "Adding..." : "Add All from Team"}
+                    </Button>
+                )}
+            </div>
 
             <div className="flex gap-2">
             <Input 
@@ -162,23 +187,51 @@ export function ProgramParticipants({
                 value={participantNo}
                 onChange={(e) => setParticipantNo(e.target.value)}
             />
-            <Select value={selectedId} onValueChange={setSelectedId}>
-                <SelectTrigger className="w-[300px]">
-                <SelectValue placeholder={`Select ${participantType}`} />
-                </SelectTrigger>
-                <SelectContent>
-                {participantType === "individual" 
-                    ? filteredCandidates.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name} ({c.chest_number})</SelectItem>
-                    ))
-                    : teams.map(t => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                    ))
-                }
-                </SelectContent>
-            </Select>
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  className="w-[300px] justify-between"
+                >
+                  {selectedId
+                    ? filteredCandidates.find((c) => c.id === selectedId)?.name
+                    : (participantType === "individual" ? "Select Candidate..." : "Select Team Lead...")}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0">
+                <Command>
+                  <CommandInput placeholder="Search candidate..." />
+                  <CommandList>
+                    <CommandEmpty>No candidate found.</CommandEmpty>
+                    <CommandGroup>
+                      {filteredCandidates.map((c) => (
+                        <CommandItem
+                          key={c.id}
+                          value={c.name}
+                          onSelect={(_) => {
+                            setSelectedId(c.id)
+                            setOpen(false)
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedId === c.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {c.name} {c.chest_number ? `(${c.chest_number})` : ""}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             <Button onClick={handleAddParticipant} disabled={!selectedId || loading}>
-                Add Single
+                Add {participantType === "individual" ? "Participant" : "Team Entry"}
             </Button>
             </div>
         </div>
@@ -197,10 +250,16 @@ export function ProgramParticipants({
                 <TableCell>{pp.participant_no}</TableCell>
                 <TableCell>
                   {participantType === "individual" 
-                    ? pp.candidates?.name 
+                    ? (
+                        <div className="flex flex-col">
+                            <span className="font-medium">{pp.candidates?.name}</span>
+                            <span className="text-xs text-muted-foreground">{pp.candidates?.teams?.name}</span>
+                        </div>
+                    )
                     : (
                         <div className="flex flex-col gap-1 items-start">
                             <span className="font-medium">{pp.teams?.name}</span>
+                            <span className="text-xs text-muted-foreground">Lead: {pp.candidates?.name || "N/A"}</span>
                             {/* Only show for team events */}
                             {pp.teams && (
                                 <ManageMembersDialog participant={pp} candidates={candidates} />

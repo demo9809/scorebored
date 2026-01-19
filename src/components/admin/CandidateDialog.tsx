@@ -38,7 +38,7 @@ import { Plus } from "lucide-react"
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
-  chest_number: z.string().min(1, "Chest Number is required"),
+  chest_number: z.string().optional(),
   team_id: z.string().optional(),
   year: z.string().optional(),
   department: z.string().optional(),
@@ -78,7 +78,7 @@ export function CandidateDialog({ teams, candidateToEdit, trigger, defaultTeamId
     try {
       const payload = {
         name: values.name,
-        chest_number: values.chest_number,
+        chest_number: values.chest_number || null,
         team_id: values.team_id === "none" ? null : values.team_id,
         year: values.year || null,
         department: values.department || null,

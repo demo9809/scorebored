@@ -27,6 +27,9 @@ export default async function CandidatesPage() {
     .from("teams")
     .select("id, name")
     .order("name", { ascending: true })
+  const { data: programs } = await supabase
+    .from("programs")
+    .select("id, name, participant_type")
 
   return (
     <div className="flex flex-col gap-8">
@@ -38,7 +41,7 @@ export default async function CandidatesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-           <BulkImportDialog teams={teams || []} />
+           <BulkImportDialog teams={teams || []} programs={programs || []} />
            <CandidateDialog teams={teams || []} />
         </div>
       </div>

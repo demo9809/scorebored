@@ -9,7 +9,7 @@ import { ArrowLeft, Trophy } from "lucide-react"
 import Link from "next/link"
 import { CandidateDialog } from "@/components/admin/CandidateDialog"
 import { BulkImportDialog } from "@/components/admin/BulkImportDialog"
-import { DeleteButton } from "@/components/admin/DeleteButton"
+import { TeamCandidatesTable } from "@/components/admin/TeamCandidatesTable"
 
 export default async function AdminTeamDetailsPage({
   params,
@@ -30,15 +30,28 @@ export default async function AdminTeamDetailsPage({
   // Calculate points
   const pointsData = await calculateTeamPoints(supabase, id)
 
-  // Fetch candidates strictly for this team
+  // Fetch candidates strictly for this team with program info
   const { data: candidates, error: candError } = await supabase
     .from("candidates")
-    .select("*")
+    .select(`
+        *,
+        program_participants(
+            program:programs(name, participant_type)
+        ),
+        program_participant_members(
+            program_participant:program_participants(
+                program:programs(name, participant_type)
+            )
+        )
+    `)
     .eq("team_id", id)
 
   // Fetch all teams for dialogs
   const { data: allTeams } = await supabase.from("teams").select("id, name")
   
+  // Fetch all programs
+  const { data: programs } = await supabase.from("programs").select("id, name, participant_type")
+
   if (candError) {
       console.error("Error fetching candidates:", candError)
   }
@@ -112,42 +125,12 @@ export default async function AdminTeamDetailsPage({
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Team Candidates</CardTitle>
                 <div className="flex gap-2">
-                    <BulkImportDialog teams={allTeams || []} defaultTeamId={id} />
+                    <BulkImportDialog teams={allTeams || []} programs={programs || []} defaultTeamId={id} />
                     <CandidateDialog teams={allTeams || []} defaultTeamId={id} />
                 </div>
             </CardHeader>
              <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Chest No</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Year</TableHead>
-                            <TableHead>Dept</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {candidates?.map(c => (
-                            <TableRow key={c.id}>
-                                <TableCell><Badge variant="outline">{c.chest_number}</Badge></TableCell>
-                                <TableCell>{c.name}</TableCell>
-                                <TableCell>{c.year || '-'}</TableCell>
-                                <TableCell>{c.department || '-'}</TableCell>
-                                <TableCell className="text-right">
-                                    <DeleteButton table="candidates" id={c.id} path={`/admin/teams/${id}`} />
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                         {(!candidates || candidates.length === 0) && (
-                            <TableRow>
-                                <TableCell colSpan={2} className="text-center text-muted-foreground">
-                                    No candidates registered.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                <TeamCandidatesTable candidates={candidates || []} teamId={id} />
              </CardContent>
          </Card>
       </div>
