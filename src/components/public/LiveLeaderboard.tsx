@@ -56,7 +56,6 @@ export function LiveLeaderboard({ program, initialParticipants, initialScores }:
   // Calculate ranks
   const rankedParticipants = useMemo(() => {
       // 1. Group scores by participant
-      const participantScores: Record<string, number> = {} // pid -> total
       
       // We need to aggregate properly.
       // Logic: Max Score per rule? Or just sum of all scores?
@@ -106,13 +105,15 @@ export function LiveLeaderboard({ program, initialParticipants, initialScores }:
   }, [scores, initialParticipants, program.best_of_judge_count])
 
   // Assign ranks
-  let currentRank = 1
-  const leaderboard = rankedParticipants.map((item, index) => {
-      if (index > 0 && item.total < rankedParticipants[index-1].total) {
-          currentRank = index + 1
-      }
-      return { ...item, rank: currentRank }
-  })
+  const leaderboard = useMemo(() => {
+      let currentRank = 1
+      return rankedParticipants.map((item, index) => {
+          if (index > 0 && item.total < rankedParticipants[index-1].total) {
+              currentRank = index + 1
+          }
+          return { ...item, rank: currentRank }
+      })
+  }, [rankedParticipants])
 
   return (
     <Card>
@@ -138,7 +139,12 @@ export function LiveLeaderboard({ program, initialParticipants, initialScores }:
                             <TableCell>
                                 <div>
                                     <div className="font-semibold">
-                                     {program.participant_type === 'individual' ? item.participant.candidates?.name : item.participant.teams?.name}
+                                     {program.participant_type === 'individual' ? (
+                                        <div className="flex flex-col">
+                                            <span>{item.participant.candidates?.name}</span>
+                                            <span className="text-xs text-muted-foreground font-normal">{item.participant.candidates?.teams?.name}</span>
+                                        </div>
+                                     ) : item.participant.teams?.name}
                                     </div>
                                     <div className="text-sm text-muted-foreground">
                                         {item.participant.participant_no}

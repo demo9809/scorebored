@@ -17,7 +17,7 @@ export default async function LeaderboardPage({
   // Fetch program details + participants + scores
   const { data: program } = await supabase
     .from("programs")
-    .select("*, program_rules(*), program_participants(*, candidates(*), teams(*))")
+    .select("*, program_rules(*), program_participants(*, candidates(*, teams(name)), teams(*))")
     .eq("id", id)
     .single()
 
