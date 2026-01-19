@@ -83,6 +83,8 @@ export type Database = {
           id: string;
           name: string;
           team_id: string | null;
+          year: string | null;
+          department: string | null;
         };
         Insert: {
           chest_number?: string | null;
@@ -90,6 +92,8 @@ export type Database = {
           id?: string;
           name: string;
           team_id?: string | null;
+          year?: string | null;
+          department?: string | null;
         };
         Update: {
           chest_number?: string | null;
@@ -97,6 +101,8 @@ export type Database = {
           id?: string;
           name?: string;
           team_id?: string | null;
+          year?: string | null;
+          department?: string | null;
         };
         Relationships: [
           {
@@ -158,6 +164,42 @@ export type Database = {
             columns: ["program_id"];
             isOneToOne: false;
             referencedRelation: "programs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      program_participant_members: {
+        Row: {
+          id: string;
+          program_participant_id: string;
+          candidate_id: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          program_participant_id: string;
+          candidate_id: string;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          program_participant_id?: string;
+          candidate_id?: string;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "program_participant_members_program_participant_id_fkey";
+            columns: ["program_participant_id"];
+            isOneToOne: false;
+            referencedRelation: "program_participants";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "program_participant_members_candidate_id_fkey";
+            columns: ["candidate_id"];
+            isOneToOne: false;
+            referencedRelation: "candidates";
             referencedColumns: ["id"];
           },
         ];

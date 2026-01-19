@@ -40,20 +40,25 @@ const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   chest_number: z.string().min(1, "Chest Number is required"),
   team_id: z.string().optional(),
+  year: z.string().optional(),
+  department: z.string().optional(),
 })
 
 interface CandidateDialogProps {
+  defaultTeamId?: string
   teams: { id: string; name: string }[]
   candidateToEdit?: {
     id: string
     name: string
     chest_number: string | null
     team_id: string | null
+    year?: string | null
+    department?: string | null
   }
   trigger?: React.ReactNode
 }
 
-export function CandidateDialog({ teams, candidateToEdit, trigger }: CandidateDialogProps) {
+export function CandidateDialog({ teams, candidateToEdit, trigger, defaultTeamId }: CandidateDialogProps) {
   const [open, setOpen] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -63,7 +68,9 @@ export function CandidateDialog({ teams, candidateToEdit, trigger }: CandidateDi
     defaultValues: {
       name: candidateToEdit?.name || "",
       chest_number: candidateToEdit?.chest_number || "",
-      team_id: candidateToEdit?.team_id || "none",
+      team_id: candidateToEdit?.team_id || defaultTeamId || "none",
+      year: candidateToEdit?.year || "",
+      department: candidateToEdit?.department || "",
     },
   })
 
@@ -73,6 +80,16 @@ export function CandidateDialog({ teams, candidateToEdit, trigger }: CandidateDi
         name: values.name,
         chest_number: values.chest_number,
         team_id: values.team_id === "none" ? null : values.team_id,
+        year: values.year || null,
+        department: values.department || null,
+      }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      console.log("Current User for Candidate Action:", user?.id, user?.user_metadata)
+
+      if (!user) {
+         toast.error("You are not logged in")
+         return
       }
 
       let error;
@@ -93,9 +110,13 @@ export function CandidateDialog({ teams, candidateToEdit, trigger }: CandidateDi
       setOpen(false)
       if (!candidateToEdit) form.reset()
       router.refresh()
-    } catch (error) {
-      toast.error(candidateToEdit ? "Failed to update candidate" : "Failed to create candidate")
-      console.error(error)
+    } catch (error: any) {
+      if (error.code === '23505') {
+        toast.error("A candidate with this Chest Number already exists.")
+      } else {
+        toast.error(candidateToEdit ? "Failed to update candidate: " + error.message : "Failed to create candidate: " + error.message)
+      }
+      console.error("Candidate creation error:", JSON.stringify(error, null, 2))
     }
   }
 
@@ -143,6 +164,35 @@ export function CandidateDialog({ teams, candidateToEdit, trigger }: CandidateDi
                 </FormItem>
               )}
             />
+              <div className="flex gap-4">
+                <FormField
+                  control={form.control}
+                  name="year"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Year (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 1st Year" {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel>Department (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. CS" {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
              <FormField
               control={form.control}
               name="team_id"

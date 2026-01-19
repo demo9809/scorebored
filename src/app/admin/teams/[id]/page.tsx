@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Trophy } from "lucide-react"
 import Link from "next/link"
+import { CandidateDialog } from "@/components/admin/CandidateDialog"
+import { BulkImportDialog } from "@/components/admin/BulkImportDialog"
+import { DeleteButton } from "@/components/admin/DeleteButton"
 
 export default async function AdminTeamDetailsPage({
   params,
@@ -32,6 +35,9 @@ export default async function AdminTeamDetailsPage({
     .from("candidates")
     .select("*")
     .eq("team_id", id)
+
+  // Fetch all teams for dialogs
+  const { data: allTeams } = await supabase.from("teams").select("id, name")
   
   if (candError) {
       console.error("Error fetching candidates:", candError)
@@ -103,8 +109,12 @@ export default async function AdminTeamDetailsPage({
 
          {/* Candidates List */}
          <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Team Candidates</CardTitle>
+                <div className="flex gap-2">
+                    <BulkImportDialog teams={allTeams || []} defaultTeamId={id} />
+                    <CandidateDialog teams={allTeams || []} defaultTeamId={id} />
+                </div>
             </CardHeader>
              <CardContent>
                 <Table>
@@ -112,6 +122,9 @@ export default async function AdminTeamDetailsPage({
                         <TableRow>
                             <TableHead>Chest No</TableHead>
                             <TableHead>Name</TableHead>
+                            <TableHead>Year</TableHead>
+                            <TableHead>Dept</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -119,6 +132,11 @@ export default async function AdminTeamDetailsPage({
                             <TableRow key={c.id}>
                                 <TableCell><Badge variant="outline">{c.chest_number}</Badge></TableCell>
                                 <TableCell>{c.name}</TableCell>
+                                <TableCell>{c.year || '-'}</TableCell>
+                                <TableCell>{c.department || '-'}</TableCell>
+                                <TableCell className="text-right">
+                                    <DeleteButton table="candidates" id={c.id} path={`/admin/teams/${id}`} />
+                                </TableCell>
                             </TableRow>
                         ))}
                          {(!candidates || candidates.length === 0) && (

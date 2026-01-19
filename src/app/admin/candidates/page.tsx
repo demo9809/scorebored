@@ -13,6 +13,7 @@ import { CandidateDialog } from "@/components/admin/CandidateDialog"
 import { DeleteButton } from "@/components/admin/DeleteButton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BulkImportDialog } from "@/components/admin/BulkImportDialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function CandidatesPage() {
   const supabase = await createClient()
@@ -47,7 +48,40 @@ export default async function CandidatesPage() {
           <CardTitle>Registered Candidates</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+            <Tabs defaultValue="all" className="w-full">
+                <TabsList className="mb-4 flex flex-wrap h-auto gap-2 justify-start">
+                    <TabsTrigger value="all">All Candidates</TabsTrigger>
+                    {teams?.map(team => (
+                        <TabsTrigger key={team.id} value={team.id}>{team.name}</TabsTrigger>
+                    ))}
+                </TabsList>
+
+                <TabsContent value="all">
+                    <CandidatesTable candidates={candidates || []} teams={teams || []} />
+                </TabsContent>
+
+                {teams?.map(team => (
+                    <TabsContent key={team.id} value={team.id}>
+                        <CandidatesTable 
+                            candidates={candidates?.filter(c => c.team_id === team.id) || []} 
+                            teams={teams || []} 
+                        />
+                    </TabsContent>
+                ))}
+            </Tabs>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function CandidatesTable({ candidates, teams }: { candidates: any[], teams: any[] }) {
+    if (candidates.length === 0) {
+        return <div className="p-8 text-center text-muted-foreground border rounded-md">No candidates found in this group.</div>
+    }
+
+    return (
+        <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Chest No.</TableHead>
@@ -57,7 +91,7 @@ export default async function CandidatesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {candidates?.map((candidate) => (
+              {candidates.map((candidate) => (
                 <TableRow key={candidate.id}>
                    <TableCell className="font-medium">
                     <Badge variant="outline">{candidate.chest_number}</Badge>
@@ -85,17 +119,7 @@ export default async function CandidatesPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {!candidates?.length && (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                    No candidates found. Register a candidate to get started.
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-    </div>
-  )
+    )
 }

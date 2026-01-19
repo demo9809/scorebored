@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { ManageMembersDialog } from "@/components/admin/ManageMembersDialog"
 
 interface ProgramParticipantsProps {
   programId: string
@@ -197,7 +198,16 @@ export function ProgramParticipants({
                 <TableCell>
                   {participantType === "individual" 
                     ? pp.candidates?.name 
-                    : pp.teams?.name}
+                    : (
+                        <div className="flex flex-col gap-1 items-start">
+                            <span className="font-medium">{pp.teams?.name}</span>
+                            {/* Only show for team events */}
+                            {pp.teams && (
+                                <ManageMembersDialog participant={pp} candidates={candidates} />
+                            )}
+                        </div>
+                    )
+                  }
                 </TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon" onClick={() => handleRemove(pp.id)}>

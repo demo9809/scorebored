@@ -46,7 +46,7 @@ export default async function ProgramDetailsPage({
   // Fetch Participants
   const { data: programParticipants } = await supabase
     .from("program_participants")
-    .select("*, candidates(*), teams(*)")
+    .select("*, candidates(*), teams(*), program_participant_members(*, candidates(name, chest_number))")
     .eq("program_id", id)
     .order("participant_no", { ascending: true })
 
