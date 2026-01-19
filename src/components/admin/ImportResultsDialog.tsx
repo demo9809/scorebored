@@ -83,7 +83,7 @@ export function ImportResultsDialog() {
             
             if (res.error) {
                 toast.error(res.error)
-            } else {
+            } else if (res.counts) {
                 toast.success(`Results imported! Created ${res.counts.candidates} candidates, ${res.counts.scores} scores.`)
                 setOpen(false)
                 setParsedData([])
