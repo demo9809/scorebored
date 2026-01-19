@@ -84,8 +84,9 @@ export function ScoreEditDialog({
           // 2. Prepare payload
           const upsertPayload = rules.map(rule => {
               const existingRecord = existingRecords?.find(r => r.rule_id === rule.id)
+              const id = existingRecord?.id || crypto.randomUUID()
               return {
-                  id: existingRecord?.id, 
+                  id, 
                   program_id: program.id,
                   judge_id: judge.id,
                   participant_id: participant.id,

@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 export default async function TeamsPage() {
   const supabase = await createClient()
 
-  const { data: teams, error } = await supabase
+  const { data: teams } = await supabase
     .from("teams")
     .select("*")
     .order("total_points", { ascending: false })
@@ -57,9 +57,14 @@ export default async function TeamsPage() {
                   <TableCell>{team.total_points ?? 0}</TableCell>
 
                   <TableCell className="text-right flex justify-end gap-2">
-                    <Button variant="ghost" size="sm">
-                      Edit
-                    </Button>
+                    <TeamDialog 
+                      teamToEdit={team}
+                      trigger={
+                        <Button variant="ghost" size="sm">
+                          Edit
+                        </Button>
+                      }
+                    />
                     <DeleteButton table="teams" id={team.id} path="/admin/teams" />
                   </TableCell>
                 </TableRow>

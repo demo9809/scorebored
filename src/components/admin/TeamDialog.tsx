@@ -34,7 +34,16 @@ const formSchema = z.object({
   avatar_url: z.string().optional(),
 })
 
-export function TeamDialog() {
+interface TeamDialogProps {
+  teamToEdit?: {
+    id: string
+    name: string
+    avatar_url: string | null
+  }
+  trigger?: React.ReactNode
+}
+
+export function TeamDialog({ teamToEdit, trigger }: TeamDialogProps) {
   const [open, setOpen] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -42,26 +51,44 @@ export function TeamDialog() {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      avatar_url: "",
+      name: teamToEdit?.name || "",
+      avatar_url: teamToEdit?.avatar_url || "",
     },
   })
 
+  // Reset form when dialog opens/closes or teamToEdit changes
+  // actually react-hook-form might need manual reset if defaultValues change
+  // but for now, keying the component or simple usage is fine. 
+  // Better: validation on open? No, let's keep it simple.
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const { error } = await supabase.from("teams").insert({
-        name: values.name,
-        avatar_url: values.avatar_url || null,
-      })
+      let error;
+      if (teamToEdit) {
+        const { error: updateError } = await supabase
+          .from("teams")
+          .update({
+            name: values.name,
+            avatar_url: values.avatar_url || null,
+          })
+          .eq("id", teamToEdit.id)
+        error = updateError
+      } else {
+        const { error: insertError } = await supabase.from("teams").insert({
+          name: values.name,
+          avatar_url: values.avatar_url || null,
+        })
+        error = insertError
+      }
 
       if (error) throw error
 
-      toast.success("Team created successfully")
+      toast.success(teamToEdit ? "Team updated successfully" : "Team created successfully")
       setOpen(false)
-      form.reset()
+      if (!teamToEdit) form.reset() 
       router.refresh()
     } catch (error) {
-      toast.error("Failed to create team")
+      toast.error(teamToEdit ? "Failed to update team" : "Failed to create team")
       console.error(error)
     }
   }
@@ -69,15 +96,17 @@ export function TeamDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Add Team
-        </Button>
+        {trigger ? trigger : (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Add Team
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Team</DialogTitle>
+          <DialogTitle>{teamToEdit ? "Edit Team" : "Add Team"}</DialogTitle>
           <DialogDescription>
-            Create a new team/house for the competition.
+            {teamToEdit ? "Update team details." : "Create a new team/house for the competition."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -109,7 +138,7 @@ export function TeamDialog() {
               )}
             />
             <DialogFooter>
-              <Button type="submit">Create Team</Button>
+              <Button type="submit">{teamToEdit ? "Save Changes" : "Create Team"}</Button>
             </DialogFooter>
           </form>
         </Form>

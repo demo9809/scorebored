@@ -44,9 +44,16 @@ const formSchema = z.object({
 
 interface CandidateDialogProps {
   teams: { id: string; name: string }[]
+  candidateToEdit?: {
+    id: string
+    name: string
+    chest_number: string | null
+    team_id: string | null
+  }
+  trigger?: React.ReactNode
 }
 
-export function CandidateDialog({ teams }: CandidateDialogProps) {
+export function CandidateDialog({ teams, candidateToEdit, trigger }: CandidateDialogProps) {
   const [open, setOpen] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -54,28 +61,40 @@ export function CandidateDialog({ teams }: CandidateDialogProps) {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      chest_number: "",
-      team_id: "none", // Special value for "No Team"
+      name: candidateToEdit?.name || "",
+      chest_number: candidateToEdit?.chest_number || "",
+      team_id: candidateToEdit?.team_id || "none",
     },
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const { error } = await supabase.from("candidates").insert({
+      const payload = {
         name: values.name,
         chest_number: values.chest_number,
         team_id: values.team_id === "none" ? null : values.team_id,
-      })
+      }
+
+      let error;
+      if (candidateToEdit) {
+         const { error: updateError } = await supabase
+          .from("candidates")
+          .update(payload)
+          .eq("id", candidateToEdit.id)
+         error = updateError
+      } else {
+         const { error: insertError } = await supabase.from("candidates").insert(payload)
+         error = insertError
+      }
 
       if (error) throw error
 
-      toast.success("Candidate created successfully")
+      toast.success(candidateToEdit ? "Candidate updated successfully" : "Candidate created successfully")
       setOpen(false)
-      form.reset()
+      if (!candidateToEdit) form.reset()
       router.refresh()
     } catch (error) {
-      toast.error("Failed to create candidate")
+      toast.error(candidateToEdit ? "Failed to update candidate" : "Failed to create candidate")
       console.error(error)
     }
   }
@@ -83,15 +102,17 @@ export function CandidateDialog({ teams }: CandidateDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Add Candidate
-        </Button>
+        {trigger ? trigger : (
+            <Button>
+            <Plus className="mr-2 h-4 w-4" /> Add Candidate
+            </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Candidate</DialogTitle>
+          <DialogTitle>{candidateToEdit ? "Edit Candidate" : "Add Candidate"}</DialogTitle>
           <DialogDescription>
-            Register a new candidate.
+            {candidateToEdit ? "Update candidate details." : "Register a new candidate."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -148,7 +169,7 @@ export function CandidateDialog({ teams }: CandidateDialogProps) {
               )}
             />
             <DialogFooter>
-              <Button type="submit">Create Candidate</Button>
+              <Button type="submit">{candidateToEdit ? "Save Changes" : "Create Candidate"}</Button>
             </DialogFooter>
           </form>
         </Form>

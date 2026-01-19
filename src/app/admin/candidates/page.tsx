@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 export default async function CandidatesPage() {
   const supabase = await createClient()
 
-  const { data: candidates, error } = await supabase
+  const { data: candidates } = await supabase
     .from("candidates")
     .select("*, teams(name)")
     .order("chest_number", { ascending: true })
@@ -68,9 +68,15 @@ export default async function CandidatesPage() {
                   </TableCell>
 
                   <TableCell className="text-right flex justify-end gap-2">
-                    <Button variant="ghost" size="sm">
-                      Edit
-                    </Button>
+                    <CandidateDialog 
+                      teams={teams || []} 
+                      candidateToEdit={candidate}
+                      trigger={
+                        <Button variant="ghost" size="sm">
+                          Edit
+                        </Button>
+                      }
+                    />
                      <DeleteButton table="candidates" id={candidate.id} path="/admin/candidates" />
                   </TableCell>
                 </TableRow>
