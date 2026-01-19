@@ -85,8 +85,11 @@ export function ScoringInterface({ program, judgeId, rules, participants, initia
           // 2. Prepare payload with IDs where available
           const upsertPayload = rules.map(rule => {
               const existingRecord = existingRecords?.find(r => r.rule_id === rule.id)
+              
+              const id = existingRecord?.id || crypto.randomUUID()
+
               return {
-                  id: existingRecord?.id, // If ID exists, Upsert performs Update. If undefined, it performs Insert.
+                  id, // If ID exists, Upsert performs Update. If not, we provide a new ID for Insert.
                   program_id: program.id,
                   judge_id: judgeId,
                   participant_id: participantId,
