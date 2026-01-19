@@ -1,3 +1,4 @@
+import { JudgeHeader } from "@/components/judge/JudgeHeader"
 import { createClient } from "@/lib/supabase/server"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -31,12 +32,7 @@ export default async function JudgeDashboard() {
             Select an active competition to start scoring.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{user.user_metadata.full_name}</span>
-            <Button variant="outline" size="sm" asChild>
-                <Link href="/api/auth/signout">Sign Out</Link>
-            </Button>
-        </div>
+        <JudgeHeader userName={user.user_metadata.full_name} />
       </div>
 
       <div className="space-y-8">
