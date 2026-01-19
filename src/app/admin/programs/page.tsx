@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-
 import { ProgramDialog } from "@/components/admin/ProgramDialog"
 import { ProgramsList } from "@/components/admin/ProgramsList"
 import { ProgramToolbar } from "@/components/admin/ProgramToolbar"
 import { Pagination } from "@/components/admin/Pagination"
 import { ImportResultsDialog } from "@/components/admin/ImportResultsDialog"
 
+
+import { BackfillRulesButton } from "@/components/admin/BackfillRulesButton"
+
+// ... imports ...
 
 const ITEMS_PER_PAGE = 10
 
@@ -79,6 +80,7 @@ export default async function ProgramsPage({
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Programs</h1>
          <div className="flex gap-2">
+            <BackfillRulesButton />
             <ImportResultsDialog />
             <ProgramDialog />
         </div>

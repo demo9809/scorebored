@@ -62,15 +62,25 @@ export function ProgramDialog() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const { error } = await supabase.from("programs").insert({
+      const { data: newProgram, error } = await supabase.from("programs").insert({
         name: values.name,
         participant_type: values.participant_type,
         status: values.status,
         max_score_per_judge: values.max_score_per_judge,
         best_of_judge_count: values.best_of_judge_count,
-      })
+      }).select().single()
 
       if (error) throw error
+
+      // Add Default Rules
+      const defaultRules = [
+        { name: "Performance", max_score: 10, order_index: 1, program_id: newProgram.id },
+        { name: "Technical Perfection", max_score: 10, order_index: 2, program_id: newProgram.id },
+        { name: "Overall Impression", max_score: 10, order_index: 3, program_id: newProgram.id },
+      ]
+
+      const { error: rulesError } = await supabase.from("program_rules").insert(defaultRules)
+      if (rulesError) console.error("Failed to add default rules", rulesError)
 
       toast.success("Program created successfully")
       setOpen(false)
