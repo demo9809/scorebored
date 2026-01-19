@@ -16,13 +16,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Trash2 } from "lucide-react"
 
+import { DownloadScoreSheetButton } from "@/components/admin/DownloadScoreSheetButton"
+import { Tables } from "@/lib/database.types"
+
 interface ProgramJudgesProps {
   programId: string
+  programName: string
+  programRules: Tables<'program_rules'>[]
+  participantType: "individual" | "team"
+  participants: any[]
   assignedJudges: any[]
   availableJudges: any[]
 }
 
-export function ProgramJudges({ programId, assignedJudges, availableJudges }: ProgramJudgesProps) {
+export function ProgramJudges({ 
+    programId, 
+    programName, 
+    programRules,
+    participantType,
+    participants,
+    assignedJudges, 
+    availableJudges 
+}: ProgramJudgesProps) {
   const [selectedJudgeId, setSelectedJudgeId] = useState<string>("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -102,7 +117,14 @@ export function ProgramJudges({ programId, assignedJudges, availableJudges }: Pr
                    {/* Date formatting could go here */}
                    -
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right flex justify-end gap-2">
+                  <DownloadScoreSheetButton 
+                    programName={programName}
+                    judgeName={pj.profiles?.full_name}
+                    rules={programRules}
+                    type={participantType}
+                    participants={participants}
+                  />
                   <Button variant="ghost" size="icon" onClick={() => handleRemoveJudge(pj.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

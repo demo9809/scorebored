@@ -1,9 +1,16 @@
 import { SupabaseClient } from "@supabase/supabase-js"
 
-export const POINTS_SYSTEM = {
-  1: 5,
-  2: 3,
-  3: 1
+// Points Configuration
+const POINTS_INDIVIDUAL: Record<number, number> = {
+    1: 5,
+    2: 3,
+    3: 1
+}
+
+const POINTS_GROUP: Record<number, number> = {
+    1: 10,
+    2: 5,
+    3: 3
 }
 
 export interface TeamPointsData {
@@ -37,7 +44,7 @@ export async function calculateTeamPoints(supabase: SupabaseClient, teamId: stri
       program_id,
       candidate_id,
       team_id,
-      programs!inner (id, name, status),
+      programs!inner (id, name, status, participant_type),
       candidates (name),
       teams (name)
     `)
@@ -63,7 +70,10 @@ export async function calculateTeamPoints(supabase: SupabaseClient, teamId: stri
           if (!p.programs) return // Should not happen if filtered correctly
           
           const rank = p.rank
-          const points = (POINTS_SYSTEM as any)[rank] || 0
+          const type = p.programs.participant_type
+          
+          const pointsMap = (type === 'team' || type === 'group') ? POINTS_GROUP : POINTS_INDIVIDUAL
+          const points = (pointsMap as any)[rank] || 0
           
           if (points > 0) {
               totalPoints += points

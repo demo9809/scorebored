@@ -1,0 +1,150 @@
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { DeleteButton } from "@/components/admin/DeleteButton"
+import { deletePrograms } from "@/app/actions/delete-programs"
+import { toast } from "sonner"
+import { Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+
+interface Program {
+  id: string
+  name: string
+  participant_type: string
+  status: string
+  max_score_per_judge: number | null
+}
+
+interface ProgramsListProps {
+  programs: Program[]
+}
+
+export function ProgramsList({ programs }: ProgramsListProps) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isDeleting, setIsDeleting] = useState(false)
+  const router = useRouter()
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === programs.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(programs.map((p) => p.id))
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter((i) => i !== id))
+    } else {
+      setSelectedIds([...selectedIds, id])
+    }
+  }
+
+  const handleDeleteSelected = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} programs?`)) return
+
+    setIsDeleting(true)
+    const result = await deletePrograms(selectedIds)
+    setIsDeleting(false)
+
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast.success("Programs deleted successfully")
+      setSelectedIds([])
+      router.refresh()
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {selectedIds.length > 0 && (
+        <div className="flex items-center gap-2 p-2 bg-destructive/10 text-destructive rounded-md">
+          <span className="text-sm font-medium pl-2">{selectedIds.length} selected</span>
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={handleDeleteSelected}
+            disabled={isDeleting}
+            className="ml-auto"
+          >
+            {isDeleting ? "Deleting..." : "Delete Selected"}
+            <Trash2 className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      <div className="rounded-md border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox 
+                  checked={programs.length > 0 && selectedIds.length === programs.length}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Select all"
+                />
+              </TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Max Score</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {programs.map((program) => (
+              <TableRow key={program.id} data-state={selectedIds.includes(program.id) && "selected"}>
+                <TableCell>
+                  <Checkbox 
+                    checked={selectedIds.includes(program.id)}
+                    onCheckedChange={() => toggleSelect(program.id)}
+                    aria-label={`Select ${program.name}`}
+                  />
+                </TableCell>
+                <TableCell className="font-medium">
+                  <Link href={`/admin/programs/${program.id}`} className="hover:underline">
+                    {program.name}
+                  </Link>
+                </TableCell>
+                <TableCell className="capitalize">{program.participant_type}</TableCell>
+                <TableCell>
+                  <Badge variant={program.status === "live" ? "default" : "secondary"} className="capitalize">
+                    {program.status}
+                  </Badge>
+                </TableCell>
+                <TableCell>{program.max_score_per_judge}</TableCell>
+
+                <TableCell className="text-right flex justify-end gap-2">
+                  <Link href={`/admin/programs/${program.id}`}>
+                    <Button variant="ghost" size="sm">Edit</Button>
+                  </Link>
+                  <DeleteButton table="programs" id={program.id} path="/admin/programs" />
+                </TableCell>
+              </TableRow>
+            ))}
+            {programs.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  No programs found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  )
+}

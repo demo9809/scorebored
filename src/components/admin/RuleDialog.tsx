@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -26,7 +26,9 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Plus } from "lucide-react"
+import { Pencil, Plus } from "lucide-react"
+import { updateRule } from "@/app/actions/update-rule"
+import { Tables } from "@/lib/database.types"
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -34,10 +36,16 @@ const formSchema = z.object({
   order_index: z.coerce.number().min(0, "Order must be positive"),
 })
 
-export function RuleDialog({ programId }: { programId: string }) {
+interface RuleDialogProps {
+  programId: string
+  rule?: Tables<'program_rules'> 
+}
+
+export function RuleDialog({ programId, rule }: RuleDialogProps) {
   const [open, setOpen] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+  const isEdit = !!rule
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -48,23 +56,51 @@ export function RuleDialog({ programId }: { programId: string }) {
     },
   })
 
+  // Reset/Populate form on open/change
+  useEffect(() => {
+    if (open && rule) {
+        form.reset({
+            name: rule.name,
+            max_score: rule.max_score,
+            order_index: rule.order_index,
+        })
+    } else if (open && !rule) {
+        form.reset({
+            name: "",
+            max_score: 10,
+            order_index: 0,
+        })
+    }
+  }, [open, rule, form])
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const { error } = await supabase.from("program_rules").insert({
-        program_id: programId,
-        name: values.name,
-        max_score: values.max_score,
-        order_index: values.order_index,
-      })
+      if (isEdit) {
+        const result = await updateRule({
+            id: rule.id,
+            ...values
+        })
+        if (result.error) {
+            toast.error(result.error)
+            return
+        }
+        toast.success("Rule updated")
+      } else {
+        const { error } = await supabase.from("program_rules").insert({
+            program_id: programId,
+            name: values.name,
+            max_score: values.max_score,
+            order_index: values.order_index,
+        })
+        if (error) throw error
+        toast.success("Rule added")
+      }
 
-      if (error) throw error
-
-      toast.success("Rule added successfully")
       setOpen(false)
       form.reset()
       router.refresh()
     } catch (error) {
-      toast.error("Failed to add rule")
+      toast.error(isEdit ? "Failed to update rule" : "Failed to add rule")
       console.error(error)
     }
   }
@@ -72,13 +108,19 @@ export function RuleDialog({ programId }: { programId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="mr-2 h-4 w-4" /> Add Rule
-        </Button>
+        {isEdit ? (
+            <Button variant="ghost" size="sm">
+                <Pencil className="h-4 w-4" />
+            </Button>
+        ) : (
+            <Button size="sm">
+            <Plus className="mr-2 h-4 w-4" /> Add Rule
+            </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Judging Rule</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Rule" : "Add Judging Rule"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -134,7 +176,7 @@ export function RuleDialog({ programId }: { programId: string }) {
               />
             </div>
             <DialogFooter>
-              <Button type="submit">Add Rule</Button>
+              <Button type="submit">{isEdit ? "Save Changes" : "Add Rule"}</Button>
             </DialogFooter>
           </form>
         </Form>

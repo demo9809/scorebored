@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { DeleteButton } from "@/components/admin/DeleteButton"
-import { Trash2 } from "lucide-react"
+import { Trash2, Edit } from "lucide-react"
 import { toast } from "sonner"
 import { bulkDeleteCandidates } from "@/app/actions/bulk-delete-candidates"
+import { CandidateDialog } from "@/components/admin/CandidateDialog"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -22,17 +23,20 @@ import {
 } from "@/components/ui/alert-dialog"
 
 interface Program {
+    id: string
     name: string
     participant_type: string
 }
 
 interface ProgramParticipant {
     program?: Program
+    program_id: string
 }
 
 interface ProgramParticipantMember {
     program_participant?: {
         program?: Program
+        program_id: string
     }
 }
 
@@ -42,6 +46,7 @@ interface Candidate {
     chest_number: string | null
     year: string | null
     department: string | null
+    team_id: string | null
     program_participants?: ProgramParticipant[]
     program_participant_members?: ProgramParticipantMember[]
 }
@@ -49,9 +54,11 @@ interface Candidate {
 interface TeamCandidatesTableProps {
     candidates: Candidate[]
     teamId: string
+    programs: Program[]
+    teams: { id: string; name: string }[]
 }
 
-export function TeamCandidatesTable({ candidates, teamId }: TeamCandidatesTableProps) {
+export function TeamCandidatesTable({ candidates, teamId, programs, teams }: TeamCandidatesTableProps) {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
     const [isDeleting, setIsDeleting] = useState(false)
 
@@ -67,6 +74,19 @@ export function TeamCandidatesTable({ candidates, teamId }: TeamCandidatesTableP
         const memberPrograms = c.program_participant_members?.map((ppm) => formatProgram(ppm.program_participant?.program)) || []
         const allPrograms = [...directPrograms, ...memberPrograms].filter(Boolean) as string[]
         return Array.from(new Set(allPrograms)).join(", ")
+    }
+    
+    // Normalize candidates for editing - extract program_ids
+    const getEditableCandidate = (c: Candidate) => {
+        const directPids = c.program_participants?.map(pp => ({ program_id: pp.program_id })) || []
+        // For members, we might need a different approach if we want to edit group enrollments via candidate.
+        // For now, let's just focusing on direct enrollments which covers most use cases 
+        // or ensure query returns program_id for members too.
+        
+        return {
+            ...c,
+            program_participants: directPids
+        }
     }
 
     const toggleSelectAll = (checked: boolean) => {
@@ -145,8 +165,6 @@ export function TeamCandidatesTable({ candidates, teamId }: TeamCandidatesTableP
                         <TableHead>Chest No</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Program(s)</TableHead>
-                        <TableHead>Year</TableHead>
-                        <TableHead>Dept</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -166,10 +184,20 @@ export function TeamCandidatesTable({ candidates, teamId }: TeamCandidatesTableP
                             <TableCell>
                                 <span className="text-xs text-muted-foreground">{getProgramNames(c) || "-"}</span>
                             </TableCell>
-                            <TableCell>{c.year || '-'}</TableCell>
-                            <TableCell>{c.department || '-'}</TableCell>
                             <TableCell className="text-right">
-                                <DeleteButton table="candidates" id={c.id} path={`/admin/teams/${teamId}`} />
+                                <div className="flex items-center justify-end gap-2">
+                                    <CandidateDialog 
+                                        candidateToEdit={getEditableCandidate(c)} 
+                                        teams={teams} 
+                                        programs={programs}
+                                        trigger={
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                        }
+                                    />
+                                    <DeleteButton table="candidates" id={c.id} path={`/admin/teams/${teamId}`} />
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))}

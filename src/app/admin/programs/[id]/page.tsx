@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { Tables } from "@/lib/database.types"
 import { RuleDialog } from "@/components/admin/RuleDialog"
 import { ProgramJudges } from "@/components/admin/ProgramJudges"
 import { ProgramParticipants } from "@/components/admin/ProgramParticipants"
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { ProgramEditDialog } from "@/components/admin/ProgramEditDialog"
 import { AdminScoreMatrix } from "@/components/admin/AdminScoreMatrix"
+import { DeleteButton } from "@/components/admin/DeleteButton"
 
 export default async function ProgramDetailsPage({
   params,
@@ -107,6 +109,10 @@ export default async function ProgramDetailsPage({
         <TabsContent value="judges">
           <ProgramJudges 
             programId={program.id} 
+            programName={program.name}
+            programRules={program.program_rules || []}
+            participantType={program.participant_type}
+            participants={programParticipants || []}
             assignedJudges={assignedJudges || []}
             availableJudges={allJudges || []} 
           />
@@ -134,7 +140,7 @@ export default async function ProgramDetailsPage({
                   <p className="text-muted-foreground text-sm">No rules defined.</p>
                 ) : (
                   <div className="grid gap-4">
-                    {program.program_rules?.sort((a: any, b: any) => (a.order_index??0) - (b.order_index??0)).map((rule: any) => (
+                    {program.program_rules?.sort((a: Tables<'program_rules'>, b: Tables<'program_rules'>) => (a.order_index??0) - (b.order_index??0)).map((rule: Tables<'program_rules'>) => (
                       <div
                         key={rule.id}
                         className="flex items-center justify-between border p-4 rounded-lg"
@@ -145,7 +151,11 @@ export default async function ProgramDetailsPage({
                             Max Score: {rule.max_score}
                           </p>
                         </div>
-                        <Badge variant="outline">Order: {rule.order_index}</Badge>
+                        <div className="flex items-center gap-2">
+                             <Badge variant="outline">Order: {rule.order_index}</Badge>
+                             <RuleDialog programId={program.id} rule={rule} />
+                             <DeleteButton table="program_rules" id={rule.id} path={`/admin/programs/${program.id}`} />
+                        </div>
                       </div>
                     ))}
                   </div>

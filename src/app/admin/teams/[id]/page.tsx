@@ -36,6 +36,7 @@ export default async function AdminTeamDetailsPage({
     .select(`
         *,
         program_participants(
+            program_id,
             program:programs(name, participant_type)
         ),
         program_participant_members(
@@ -126,11 +127,11 @@ export default async function AdminTeamDetailsPage({
                 <CardTitle>Team Candidates</CardTitle>
                 <div className="flex gap-2">
                     <BulkImportDialog teams={allTeams || []} programs={programs || []} defaultTeamId={id} />
-                    <CandidateDialog teams={allTeams || []} defaultTeamId={id} />
+                    <CandidateDialog teams={allTeams || []} programs={programs || []} defaultTeamId={id} />
                 </div>
             </CardHeader>
              <CardContent>
-                <TeamCandidatesTable candidates={candidates || []} teamId={id} />
+                <TeamCandidatesTable candidates={candidates || []} teamId={id} programs={programs || []} teams={allTeams || []} />
              </CardContent>
          </Card>
       </div>

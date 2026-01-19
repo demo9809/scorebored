@@ -17,7 +17,7 @@ export default async function JudgesPage() {
   const supabase = await createClient()
 
   // Fetch profiles with role 'judge'
-  const { data: judges, error } = await supabase
+  const { data: judges } = await supabase
     .from("profiles")
     .select("*")
     .eq("role", "judge")
@@ -58,9 +58,14 @@ export default async function JudgesPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      Edit
-                    </Button>
+                    <JudgeDialog 
+                        judge={judge} 
+                        trigger={
+                            <Button variant="ghost" size="sm">
+                                Edit
+                            </Button>
+                        } 
+                    />
                     <DeleteButton table="profiles" id={judge.id} path="/admin/judges" />
                   </TableCell>
                 </TableRow>

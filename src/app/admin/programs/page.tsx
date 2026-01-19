@@ -1,82 +1,85 @@
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
 
 import { ProgramDialog } from "@/components/admin/ProgramDialog"
-import { DeleteButton } from "@/components/admin/DeleteButton"
+import { ProgramsList } from "@/components/admin/ProgramsList"
+import { ProgramToolbar } from "@/components/admin/ProgramToolbar"
+import { Pagination } from "@/components/admin/Pagination"
+import { ImportResultsDialog } from "@/components/admin/ImportResultsDialog"
 
-async function getPrograms() {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from("programs")
-    .select("*")
-    .order("created_at", { ascending: false })
-  return data || []
+
+const ITEMS_PER_PAGE = 10
+
+type SearchParams = {
+  q?: string
+  status?: string
+  type?: string
+  page?: string
 }
 
-export default async function ProgramsPage() {
-  const programs = await getPrograms()
+async function getPrograms(searchParams: SearchParams) {
+  const supabase = await createClient()
+  const { q, status, type, page } = searchParams
+  
+  let query = supabase
+    .from("programs")
+    .select("*", { count: "exact" })
+
+  if (q) {
+    query = query.ilike("name", `%${q}%`)
+  }
+
+  if (status && status !== "all") {
+    query = query.eq("status", status as any)
+  }
+
+  if (type && type !== "all") {
+    query = query.eq("participant_type", type as any)
+  }
+
+  const currentPage = Number(page) || 1
+  const from = (currentPage - 1) * ITEMS_PER_PAGE
+  const to = from + ITEMS_PER_PAGE - 1
+
+  const { data, count, error } = await query
+    .order("created_at", { ascending: false })
+    .range(from, to)
+  
+  if (error) {
+      console.error("Error fetching programs", error)
+      return { data: [], count: 0 }
+  }
+
+  return { data: data || [], count: count || 0 }
+}
+
+export default async function ProgramsPage({
+    searchParams,
+  }: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+  }) {
+  const resolvedSearchParams = await searchParams
+  const { data: programs, count } = await getPrograms(resolvedSearchParams)
+  const totalPages = Math.ceil(count / ITEMS_PER_PAGE)
+  const currentPage = Number(resolvedSearchParams.page) || 1
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Programs</h1>
-        <ProgramDialog />
+        <div className="flex gap-2">
+            <ImportResultsDialog />
+            <ProgramDialog />
+        </div>
       </div>
 
-      <div className="rounded-md border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Max Score</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {programs.map((program) => (
-              <TableRow key={program.id}>
-                <TableCell className="font-medium">
-                  <Link href={`/admin/programs/${program.id}`} className="hover:underline">
-                    {program.name}
-                  </Link>
-                </TableCell>
-                <TableCell>{program.participant_type}</TableCell>
-                <TableCell>
-                  <Badge variant={program.status === "live" ? "default" : "secondary"}>
-                    {program.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>{program.max_score_per_judge}</TableCell>
+      <div className="space-y-4">
+        <ProgramToolbar />
 
-                <TableCell className="text-right flex justify-end gap-2">
-                  <Link href={`/admin/programs/${program.id}`}>
-                    <Button variant="ghost" size="sm">Edit</Button>
-                  </Link>
-                  <DeleteButton table="programs" id={program.id} path="/admin/programs" />
-                </TableCell>
-              </TableRow>
-            ))}
-            {programs.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  No programs found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        <ProgramsList programs={programs} />
+
+        <Pagination totalPages={totalPages} currentPage={currentPage} />
       </div>
     </div>
   )
