@@ -164,7 +164,7 @@ export async function importResults(rows: ImportRow[]) {
 
             // 5. Update Rank/Score
             // Use correct points map
-            const pointsMap = program.participant_type === 'team' || program.participant_type === 'group' 
+            const pointsMap = program.participant_type === 'team' 
                 ? POINTS_GROUP 
                 : POINTS_INDIVIDUAL
                 
